@@ -8,7 +8,9 @@ The second part is a collaborative based recommender that uses the machine learn
 user ratings of movies. It splits the data into a training and testing dataset (80/20) and uses Alternating Least
 Squares (ALS) and Root Mean Squared Error (RMSE) in the process.
 
-
+The last part combines the collaborative and content recommendation systems to first recommend a movie based on its
+preference, and then recommends movies that are similar the suggested movie. I was unable to get this part working
+for all scenarios (different combinations of user and movie), but ran out of time to debug the issue.
 '''
 
 import pandas as pd
@@ -28,6 +30,7 @@ spark = SparkSession.builder.appName('Recommender').config("spark.driver.memory"
 spark
 
 #content based recommendation
+#ensures that the 'overview' metadata does not only contain filler words (and, the, etc.)
 def has_meaningful_words(sentence):
     if isinstance(sentence, float):
         return False
@@ -36,7 +39,6 @@ def has_meaningful_words(sentence):
         if word.lower() not in ENGLISH_STOP_WORDS:
             return True
     return False
-
 
 #import the movie metadata file using pandas
 dfmeta = pd.read_csv('movies_metadata.csv', low_memory=False)
@@ -150,6 +152,7 @@ def hybrid_recommendation(userId, title):
     # filter dfmeta for only movies in the user_movieIds list
     user_meta = dfmeta[dfmeta["movieId"].isin(user_movieIds)]
     non_stopword_overviews = user_meta['overview'].apply(has_meaningful_words)
+    #if there are no valid combinations of the provided user+movie, the function will return the following error
     if not any(non_stopword_overviews):
         print("No meaningful movie overviews for the recommended movies for this user.")
         return None
